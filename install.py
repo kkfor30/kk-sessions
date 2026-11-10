@@ -19,7 +19,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 REPO = Path(__file__).resolve().parent
 HOME = Path.home()
-SKILLS = ["kk-session-route", "kk-session-tidy", "kk-session-setup"]
+SKILLS = ["kk-session-route", "kk-session-tidy", "kk-session-setup", "kk-session-restore"]
 MARK = "kk-session-route"  # 钩子命令里含这个字符串即视为本项目写入
 RULES_START = "<!-- kk-sessions:start -->"
 RULES_END = "<!-- kk-sessions:end -->"
@@ -152,13 +152,22 @@ def main():
                    help="Skill 统一装到这个目录（自己维护共享 Skill 库时用），钩子指向这里")
     p.add_argument("--no-skills", action="store_true", help="不复制 Skill，只处理钩子和规则")
     p.add_argument("--no-rules", action="store_true", help="不写跟进规则（全局规则里已有时用）")
+    p.add_argument("--force", action="store_true", help="卸载时不检查侧栏快照")
     a = p.parse_args()
     DRY = a.dry_run
 
     wanted = a.agents.split(",") if a.agents else [k for k, v in AGENTS.items() if v["root"].exists()]
     unknown = [w for w in wanted if w not in AGENTS]
     if unknown or not wanted:
-        sys.exit(f"没有可安装的 Agent：{unknown or '未检测到 ~/.claude 或 ~/.codex'}")
+        print(f"没有可安装的 Agent：{unknown or '未检测到 ~/.claude 或 ~/.codex'}")
+        sys.exit(1)
+
+    snapshots = HOME / ".agent-rules" / "kk-sessions" / "snapshots"
+    if a.uninstall and not a.force and snapshots.is_dir() and any(snapshots.iterdir()):
+        print("检测到侧栏快照，说明 kk-sessions 改过会话标题或分区。\n"
+              "先在 Claude Code 或 Codex 里说「撤销 kk-sessions 的改动」恢复原样，再运行卸载；\n"
+              "不需要恢复侧栏的话，加 --force 直接卸载。")
+        sys.exit(1)
 
     if a.skills_dir and not a.no_skills:
         edit_skills(a.skills_dir, a.uninstall)
@@ -169,8 +178,14 @@ def main():
         if not a.skills_dir and not a.no_skills:
             edit_skills(skills_dir, a.uninstall)
         edit_hooks(agent, cfg, skills_dir, a.uninstall)
-        if not a.no_rules:
-            edit_rules(cfg, a.uninstall)
+        if a.no_rules:
+            continue
+        rules = cfg["rules_file"]
+        if (agent == "claude" and "codex" in wanted and rules.exists()
+                and ".codex/AGENTS.md" in rules.read_text(encoding="utf-8")):
+            say(f"跳过跟进规则：{rules} 已引用 ~/.codex/AGENTS.md，规则只写在那边")
+            continue
+        edit_rules(cfg, a.uninstall)
 
     if a.uninstall:
         print("\n已卸载。工作区地图 ~/.agent-rules/workspace-map.md 保留，不需要可自行删除。")
