@@ -1,0 +1,19 @@
+{
+  "hooks": {
+    "enabled": true,
+    "events": {
+      "SessionStart": [
+        {
+          "matcher": "startup",
+          "hooks": [
+            {
+              "type": "process",
+              "command": "python",
+              "args": ["<HOME>/.skilldock/skills/kk-session-route/scripts/session_start.py"]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

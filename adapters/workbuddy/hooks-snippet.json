@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python ~/.skilldock/skills/kk-session-route/scripts/session_start.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
