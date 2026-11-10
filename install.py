@@ -68,15 +68,24 @@ def write(f, text):
     f.write_bytes(text.encode("utf-8"))
 
 
-def hook_command(agent, skills_dir):
+def hook_specs(agent, cfg, skills_dir):
+    """本项目要写入的钩子：{事件: 钩子组}。"""
+    scripts = skills_dir / "kk-session-route" / "scripts"
+    py = f'"{Path(sys.executable).as_posix()}"'
     if agent == "claude":
-        return f"echo '{HINT}'"
-    script = (skills_dir / "kk-session-route" / "scripts" / "session_start.py").as_posix()
-    return f'"{Path(sys.executable).as_posix()}" "{script}"'
+        start = f"echo '{HINT}'"
+    else:
+        start = f'{py} "{(scripts / "session_start.py").as_posix()}"'
+    specs = {"SessionStart": {"matcher": cfg["matcher"], "hooks": [
+        {"type": "command", "command": start, "timeout": 10}]}}
+    if agent == "claude":  # 收尾检查：第一轮漏了归位就拦一次
+        specs["Stop"] = {"hooks": [{"type": "command", "timeout": 10,
+                                    "command": f'{py} "{(scripts / "stop_check.py").as_posix()}"'}]}
+    return specs
 
 
 def strip_ours(groups):
-    """去掉 SessionStart 里本项目写入的钩子，保留用户自己的。"""
+    """去掉本项目写入的钩子，保留用户自己的。"""
     kept = []
     for g in groups:
         hooks = [h for h in g.get("hooks", []) if MARK not in json.dumps(h, ensure_ascii=False)]
@@ -91,17 +100,18 @@ def edit_hooks(agent, cfg, skills_dir, remove):
         return
     data = json.loads(f.read_text(encoding="utf-8")) if f.exists() else {}
     hooks = data.setdefault("hooks", {})
-    groups = strip_ours(hooks.get("SessionStart", []))
-    if not remove:
-        groups.append({"matcher": cfg["matcher"], "hooks": [
-            {"type": "command", "command": hook_command(agent, skills_dir), "timeout": 10}]})
-    if groups:
-        hooks["SessionStart"] = groups
-    else:
-        hooks.pop("SessionStart", None)
+    specs = hook_specs(agent, cfg, skills_dir)
+    for event in ("SessionStart", "Stop"):
+        groups = strip_ours(hooks.get(event, []))
+        if not remove and event in specs:
+            groups.append(specs[event])
+        if groups:
+            hooks[event] = groups
+        else:
+            hooks.pop(event, None)
     if not hooks:
         data.pop("hooks")
-    say(f"{'移除' if remove else '写入'}启动钩子：{f}")
+    say(f"{'移除' if remove else '写入'}钩子（{"、".join(specs)}）：{f}")
     if DRY:
         return
     backup = f.with_name(f.name + ".kk-sessions.bak")

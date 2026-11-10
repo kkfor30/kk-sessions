@@ -48,7 +48,8 @@ kk-sessions 第一次改动侧栏前，会存一份快照（`~/.agent-rules/kk-s
 
 - **最低建议：Sonnet 5.5，推理强度 xhigh**。更强的模型（如 Opus）或更高推理强度都可以。
 - **不建议**：Sonnet 的 medium 及以下推理强度、Haiku。实测 Sonnet medium 回答完问题就直接结束，没有改标题和归区。
-- 如果某个会话没归位，在里面说一句「路由一下」即可补上。
+- Claude Code 另装了一个收尾检查钩子：新会话第一轮结束时，如果还没改标题，会拦一次让模型补做归位。实测 Sonnet medium 被拦下后能补上，所以低配置也不至于漏掉，只是多一轮。Codex 暂时没有这层兜底。
+- 如果某个会话还是没归位，在里面说一句「路由一下」即可补上。
 
 ## 各 Agent 能力
 
@@ -86,7 +87,7 @@ python install.py --uninstall       # 卸载
 | | Claude Code | Codex |
 | --- | --- | --- |
 | Skill | `~/.claude/skills/` | `~/.codex/skills/` |
-| 启动钩子 | `~/.claude/settings.json` | `~/.codex/hooks.json` |
+| 钩子 | `~/.claude/settings.json`：新会话启动提示 + 收尾检查 | `~/.codex/hooks.json`：新会话启动提示 |
 | 跟进规则 | `~/.claude/CLAUDE.md` | `~/.codex/AGENTS.md` |
 | 工作区地图 | `~/.agent-rules/workspace-map.md`（初始化时生成，两边共用） | |
 
