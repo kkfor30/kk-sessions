@@ -29,7 +29,7 @@ description: 撤销 kk-sessions 对侧栏做过的改动：按首次使用前存
 
 kk-session-setup、kk-session-tidy、kk-session-route 在**第一次改动侧栏之前**都要检查快照目录：已有当前 Agent 的快照就跳过，没有就存一份。本 Skill 在恢复前也存一份。
 
-存法：列出全部会话（含已归档）和分区，写成 JSON：
+存法：列出全部会话（含已归档）和分区，写成 JSON。会话超过 100 个时，只记最近 30 天活动过的会话加上本次要改动的会话；恢复本来就只处理快照里记过的会话：
 
 ```json
 {
