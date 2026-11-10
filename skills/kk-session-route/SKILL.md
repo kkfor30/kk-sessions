@@ -1,6 +1,6 @@
 ---
 name: kk-session-route
-description: 新会话第一轮做会话归位：按工作区地图判断这次内容属于哪个分区和目录，建主题目录、切目录、按统一格式命名、归入侧栏分区。由各 Agent 的 SessionStart 钩子在新会话启动时触发；用户说"路由一下""这个会话归到哪""重新归类"时也使用。支持 Claude Code、Codex、Z Code、WorkBuddy。不用于中途换话题时自动迁移，批量整理旧会话用 kk-session-tidy。
+description: 新会话第一轮做会话归位：按工作区地图判断这次内容属于哪个分区和目录，建主题目录、切目录、按统一格式命名、归入侧栏分区。由 SessionStart 钩子在新会话启动时触发；用户说"路由一下""这个会话归到哪""重新归类"时也使用。支持 Claude Code 桌面端和 Codex 桌面端。不用于中途换话题时自动迁移；批量整理旧会话用 kk-session-tidy，首次生成地图用 kk-session-setup。
 ---
 
 # kk-session-route
@@ -8,6 +8,8 @@ description: 新会话第一轮做会话归位：按工作区地图判断这次�
 ## 输入
 
 工作区地图：`~/.agent-rules/workspace-map.md`（分区、目录、判定线索、标题格式）。先读它，再判断。
+
+地图不存在时不归位：用一句话说明还没初始化，问用户要不要现在运行 `kk-session-setup`；用户不要就直接处理请求。
 
 ## 六个动作
 
@@ -20,14 +22,14 @@ description: 新会话第一轮做会话归位：按工作区地图判断这次�
 | 列出和新建分区 | 找到地图里的同名侧栏分区，没有就新建 |
 | 移入分区 | 把当前会话放进该分区 |
 | 切目录 | 把会话的工作目录换到目标目录 |
-| 列出全部会话 | 取所有会话的标题、分区、目录、最后活动时间（kk-session-tidy 用） |
+| 列出全部会话 | 取所有会话的标题、分区、目录、最后活动时间（kk-session-setup、kk-session-tidy 用） |
 
 某个动作在当前 Agent 做不到时，统一降级：在回复里给出建议值（分区名、标题、目录），由用户手动操作。
 
 ## 流程
 
 1. **判断归属**：根据用户第一条消息，对照地图选分区和产物目录。
-   - 需要具体主题的分区，先列出该目录下已有子目录，能对上就用已有的；对不上再定一个新主题名。调研转正式选题、`_试用` 转正式项目时，整个文件夹移过去。
+   - 需要具体主题的分区，先列出该目录下已有子目录，能对上就用已有的；对不上再定一个新主题名。调研转正式选题、试用转正式项目时，整个文件夹移过去。
    - 拿不准时问用户一句，给出你的首选；不要猜着建顶层目录。
 2. **建主题目录和 README**：新主题当场建目录和 `README.md`（是什么、状态：想法、下一步），子目录用到时再建。
 3. **切目录**：工作目录不在目标目录内时切过去；已经在里面就跳过。一两句话能答完的问题不切目录。切不了时，本会话的产物一律写到目标目录的绝对路径。
@@ -46,14 +48,7 @@ description: 新会话第一轮做会话归位：按工作区地图判断这次�
 
 ## 适配
 
-按环境变量判断自己是谁，从上往下第一个命中的为准（Z Code、WorkBuddy 也会设置 `CLAUDE_SESSION_ID`，不能只看它）：
-
-| 判断 | Agent |
-| --- | --- |
-| 有 `ZCODE_SESSION_ID` | Z Code |
-| 有 `CODEBUDDY_SESSION_ID` 或 `WORKBUDDY_APP_VERSION` | WorkBuddy |
-| 有 `CODEX_THREAD_ID` | Codex |
-| 有 `mcp__ccd_*` 工具 | Claude Code 桌面端 |
+有环境变量 `CODEX_THREAD_ID` 是 Codex；有 `mcp__ccd_*` 工具是 Claude Code 桌面端。都不是（如 Claude Code 命令行），六个动作全部降级为建议。
 
 ### Claude Code 桌面端
 
@@ -78,28 +73,6 @@ description: 新会话第一轮做会话归位：按工作区地图判断这次�
 | 移入分区 | `move_thread_to_sidebar_section({threadId, hostId: "local", sectionId})`，然后用 `list_threads` 回读：正式键 `codex:thread:local:<threadId>` 出现在目标分区的 `itemKeys` 里才算成功。首轮常只移进一个 `client-new-thread` 别名，没成功就在下一轮开头补做一次并再回读 |
 | 切目录 | 不支持，降级：产物写到目标目录的绝对路径，回复里建议用户在侧栏把会话移到对应项目 |
 | 列出全部会话 | `list_threads`（`mode: "history"` 分页），归档用 `list_archived_threads` |
-
-### Z Code
-
-| 动作 | 做法 |
-| --- | --- |
-| 取会话 ID | 环境变量 `ZCODE_SESSION_ID` |
-| 改标题 | `python ~/.skilldock/skills/kk-session-route/scripts/zcode_session.py rename --session <ID> --title "<标题>"`；写库后读回校验，失败自动恢复原标题。侧栏可能要切换分组或重启后才显示 |
-| 列出和新建分区 | 不支持，降级：回复里给出建议分区名，由用户在侧栏手动分组 |
-| 移入分区 | 不支持，同上 |
-| 切目录 | 不支持，降级：产物写到目标目录的绝对路径 |
-| 列出全部会话 | `python ~/.skilldock/skills/kk-session-route/scripts/zcode_session.py list`（只读；不含分区） |
-
-### WorkBuddy
-
-| 动作 | 做法 |
-| --- | --- |
-| 取会话 ID | 环境变量 `CODEBUDDY_SESSION_ID` |
-| 改标题 | 不支持，降级：回复里给出建议标题，由用户在侧栏右键重命名 |
-| 列出和新建分区 | 不支持，降级 |
-| 移入分区 | 不支持，降级 |
-| 切目录 | 不支持会话级切换；Bash 里 `cd` 到目标目录后跨命令保持，文件一律写绝对路径 |
-| 列出全部会话 | 不支持 |
 
 ## 边界
 

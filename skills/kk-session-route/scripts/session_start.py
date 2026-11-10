@@ -1,6 +1,6 @@
 """SessionStart 钩子：提醒 Agent 先调用 kk-session-route。
 
-输出 hookSpecificOutput.additionalContext（Codex、Z Code、WorkBuddy 通用）。
+输出 hookSpecificOutput.additionalContext，供 Codex 使用；Claude Code 的钩子直接 echo 同一段提示。
 JSON 按 ASCII 转义输出，避免 Windows 控制台代码页把中文弄乱。
 """
 import json
