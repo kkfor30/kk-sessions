@@ -23,8 +23,8 @@ SKILLS = ["kk-session-route", "kk-session-tidy", "kk-session-setup", "kk-session
 MARK = "kk-session-route"  # 钩子命令里含这个字符串即视为本项目写入
 RULES_START = "<!-- kk-sessions:start -->"
 RULES_END = "<!-- kk-sessions:end -->"
-HINT = ("[kk-session-route] 这是新会话。回复用户第一条消息前，先调用 kk-session-route skill "
-        "完成会话归位（判断分区与产物目录、建目录、切目录、命名、归入侧栏分区），用一句话说明结果后再处理请求。")
+HINT = ("[kk-session-route] 这是新会话，第一条消息按 kk-session-route skill 归位，但不"
+        "要让归位挡在回答前面：一两句能答完的问题先直接回答，再在本轮末尾调用 kk-session-route 改标题、归区；要产出文件的任务先调用 kk-session-route 读地图、定目录、建目录，然后处理请求，改标题、归区、切目录放在本轮结束前完成。")
 RULES = f"""{RULES_START}
 ## 会话跟进（kk-sessions）
 
