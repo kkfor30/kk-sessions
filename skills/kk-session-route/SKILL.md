@@ -1,6 +1,6 @@
 ---
 name: kk-session-route
-description: 新会话第一轮做会话归位：按工作区地图判断这次内容属于哪个分区和目录，建主题目录、切目录、按统一格式命名、归入侧栏分区。由 SessionStart 钩子在新会话启动时触发，先处理用户的请求、本轮结束前完成归位；用户说"路由一下""这个会话归到哪""重新归类"时也使用。支持 Claude Code 桌面端和 Codex 桌面端。不用于中途换话题时自动迁移；批量整理旧会话用 kk-session-tidy，首次生成地图用 kk-session-setup。
+description: 新会话第一轮做会话归位：按工作区地图判断这次内容属于哪个分区和目录，建主题目录、切目录、按统一格式命名、归入侧栏分区。Claude Code 由启动钩子触发，先处理用户的请求、本轮结束前完成归位；Codex 的标题和分区由后台钩子自动完成，会话本身只负责把产物写到目标目录；用户说"路由一下""这个会话归到哪""重新归类"时也使用。支持 Claude Code 桌面端和 Codex 桌面端。不用于中途换话题时自动迁移；批量整理旧会话用 kk-session-tidy，首次生成地图用 kk-session-setup。
 ---
 
 # kk-session-route
@@ -87,13 +87,20 @@ description: 新会话第一轮做会话归位：按工作区地图判断这次�
 
 ### Codex 桌面端
 
+新会话的改标题、建分区、移入分区由 Stop 钩子 `scripts/codex_route.py` 在后台完成：每轮结束后，对前 3 轮内、标题还不是规定格式的会话，调一次独立模型（默认 `gpt-6-luna`、low，可在 `~/.agent-rules/kk-sessions/config.json` 的 `codex_model`、`codex_effort` 改），再通过桌面端自己的工具通道写回（侧栏立即刷新；桌面端没开时退回 app-server），结果记在 `~/.agent-rules/kk-sessions/codex/log.jsonl`。SessionStart 钩子 `scripts/session_start.py` 在新会话开头把这些分工和 ⏳ 规则交给会话模型。所以新会话第一轮里：
+
+- 情况 A：什么都不做。
+- 情况 B、C：只做「回答前」那几步（定目录、建目录、产物写到目标目录），不改标题、不动分区；切目录按下表降级；C 的末尾提问照常。
+
+用户说"路由一下""重新归类"，或 kk-session-setup、kk-session-tidy、kk-session-restore 需要时，才用下表的工具手动操作：
+
 | 动作 | 做法 |
 | --- | --- |
 | 取会话 ID | 环境变量 `CODEX_THREAD_ID` |
 | 改标题 | `mcp__codex_app__set_thread_title`（省略 `threadId` 即作用于当前会话） |
 | 列出和新建分区 | `list_threads` 返回的 `sections[]` 找同名，没有就 `create_sidebar_section` |
 | 移入分区 | `move_thread_to_sidebar_section({threadId, hostId: "local", sectionId})`，然后用 `list_threads` 回读：正式键 `codex:thread:local:<threadId>` 出现在目标分区的 `itemKeys` 里才算成功。首轮常只移进一个 `client-new-thread` 别名，没成功就在下一轮开头补做一次并再回读 |
-| 切目录 | 不支持，降级：产物写到目标目录的绝对路径，回复里建议用户在侧栏把会话移到对应项目 |
+| 切目录 | 不支持：`move_thread_to_project` 遇到会话原文件夹不在目标项目里时直接返回 `confirmation_required`，不弹确认卡，只能由用户在侧栏拖动。不要调用；产物写到目标目录的绝对路径，回复最后一句告诉用户产物位置，需要时可在侧栏把会话拖到对应项目 |
 | 列出全部会话 | `list_threads`（`mode: "history"` 分页），归档用 `list_archived_threads` |
 
 ## 边界

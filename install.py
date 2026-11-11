@@ -1,9 +1,9 @@
-"""kk-sessions 安装脚本：检测本机的 Claude Code 和 Codex，装入 Skill、启动钩子和跟进规则。
+"""kk-sessions 安装脚本：检测本机的 Claude Code 和 Codex，装入 Skill 和钩子。不改全局指令文件。
 
 用法：
   python install.py                 安装到检测到的全部 Agent
   python install.py --agents codex  只装 Codex
-  python install.py --uninstall     卸载（移除本项目写入的 Skill、钩子和规则块）
+  python install.py --uninstall     卸载（移除本项目写入的 Skill 和钩子）
   python install.py --dry-run       只打印将要做的事
 
 可重复执行：已装过的部分会被替换，不会重复添加。
@@ -21,17 +21,12 @@ REPO = Path(__file__).resolve().parent
 HOME = Path.home()
 SKILLS = ["kk-session-route", "kk-session-tidy", "kk-session-setup", "kk-session-restore"]
 MARK = "kk-session-route"  # 钩子命令里含这个字符串即视为本项目写入
-RULES_START = "<!-- kk-sessions:start -->"
+RULES_START = "<!-- kk-sessions:start -->"  # 旧版写进全局指令的规则块，现在只用于清理
 RULES_END = "<!-- kk-sessions:end -->"
 HINT = ("[kk-session-route] 这是新会话，第一条消息按 kk-session-route skill 归位，但不"
-        "要让归位挡在回答前面：一两句能答完的问题先直接回答，再在本轮末尾调用 kk-session-route 改标题、归区；要产出文件的任务先调用 kk-session-route 读地图、定目录、建目录，然后处理请求，改标题、归区、切目录放在本轮结束前完成。")
-RULES = f"""{RULES_START}
-## 会话跟进（kk-sessions）
-
-- 回复结尾留下只有用户能做、做完才能继续的事（验收、在方案里选、提交或发布、提供素材）时，在当前会话标题末尾加 ` ⏳`；只给可选建议时不加；用户回来继续推进时去掉。改标题的做法见 `kk-session-route` 的「适配」一节。
-- 除 ⏳ 外不改已有会话标题，主题命名后锁定；置顶只由用户手动操作。
-{RULES_END}
-"""
+        "要让归位挡在回答前面：一两句能答完的问题先直接回答，再在本轮末尾调用 kk-session-route 改标题、归区；"
+        "要产出文件的任务先调用 kk-session-route 读地图、定目录、建目录，然后处理请求，改标题、归区、切目录放在本轮结束前完成。"
+        "之后某轮回复结尾留下只有用户能做、做完才能继续的事时，在会话标题末尾加 ⏳，用户回来继续推进时去掉；除此之外不改标题。")
 
 AGENTS = {
     "claude": {
@@ -47,7 +42,6 @@ AGENTS = {
         "root": HOME / ".codex",
         "skills": HOME / ".codex" / "skills",
         "hooks_file": HOME / ".codex" / "hooks.json",
-        "matcher": "^startup$",
         "rules_file": HOME / ".codex" / "AGENTS.md",
     },
 }
@@ -72,16 +66,21 @@ def hook_specs(agent, cfg, skills_dir):
     """本项目要写入的钩子：{事件: 钩子组}。"""
     scripts = skills_dir / "kk-session-route" / "scripts"
     py = f'"{Path(sys.executable).as_posix()}"'
-    if agent == "claude":
-        start = f"echo '{HINT}'"
-    else:
-        start = f'{py} "{(scripts / "session_start.py").as_posix()}"'
-    specs = {"SessionStart": {"matcher": cfg["matcher"], "hooks": [
-        {"type": "command", "command": start, "timeout": 10}]}}
-    if agent == "claude":  # 收尾检查：第一轮漏了归位就拦一次
-        specs["Stop"] = {"hooks": [{"type": "command", "timeout": 10,
-                                    "command": f'{py} "{(scripts / "stop_check.py").as_posix()}"'}]}
-    return specs
+    if agent == "codex":  # 启动时交代会话要做的事；每轮结束后在后台改标题、归分区
+        def hook(script):
+            cmd = f'{py} "{(scripts / script).as_posix()}"'
+            h = {"type": "command", "timeout": 10, "command": cmd}
+            if sys.platform == "win32":  # Codex 在 Windows 用 PowerShell 跑钩子，带引号的程序路径要加 &
+                h["commandWindows"] = "& " + cmd
+            return h
+        return {"SessionStart": {"hooks": [hook("session_start.py")]},
+                "Stop": {"hooks": [hook("codex_route.py")]}}
+    return {  # Claude：启动提示 + 收尾检查（第一轮漏了归位就拦一次）
+        "SessionStart": {"matcher": cfg["matcher"], "hooks": [
+            {"type": "command", "command": f"echo '{HINT}'", "timeout": 10}]},
+        "Stop": {"hooks": [{"type": "command", "timeout": 10,
+                            "command": f'{py} "{(scripts / "stop_check.py").as_posix()}"'}]},
+    }
 
 
 def strip_ours(groups):
@@ -111,7 +110,7 @@ def edit_hooks(agent, cfg, skills_dir, remove):
             hooks.pop(event, None)
     if not hooks:
         data.pop("hooks")
-    say(f"{'移除' if remove else '写入'}钩子（{"、".join(specs)}）：{f}")
+    say(f"{'移除' if remove else '写入'}钩子（{'、'.join(specs)}）：{f}")
     if DRY:
         return
     backup = f.with_name(f.name + ".kk-sessions.bak")
@@ -120,19 +119,16 @@ def edit_hooks(agent, cfg, skills_dir, remove):
     write(f, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
 
 
-def edit_rules(cfg, remove):
+def strip_old_rules(cfg):
+    """清理旧版写进全局指令文件的规则块（现在改由启动钩子注入）。"""
     f = cfg["rules_file"]
     text = f.read_text(encoding="utf-8") if f.exists() else ""
-    if RULES_START in text and RULES_END in text:
-        head, rest = text.split(RULES_START, 1)
-        text = head.rstrip("\n") + rest.split(RULES_END, 1)[1]
-    elif remove:
+    if RULES_START not in text or RULES_END not in text:
         return
-    if not remove:
-        text = (text.rstrip("\n") + "\n\n" if text.strip() else "") + RULES
-    say(f"{'移除' if remove else '写入'}跟进规则：{f}")
+    head, rest = text.split(RULES_START, 1)
+    say(f"清理旧版规则块：{f}")
     if not DRY:
-        write(f, text.lstrip("\n"))
+        write(f, (head.rstrip("\n") + rest.split(RULES_END, 1)[1]).lstrip("\n"))
 
 
 def edit_skills(target, remove):
@@ -160,8 +156,7 @@ def main():
     p.add_argument("--dry-run", action="store_true")
     p.add_argument("--skills-dir", type=Path,
                    help="Skill 统一装到这个目录（自己维护共享 Skill 库时用），钩子指向这里")
-    p.add_argument("--no-skills", action="store_true", help="不复制 Skill，只处理钩子和规则")
-    p.add_argument("--no-rules", action="store_true", help="不写跟进规则（全局规则里已有时用）")
+    p.add_argument("--no-skills", action="store_true", help="不复制 Skill，只处理钩子")
     p.add_argument("--force", action="store_true", help="卸载时不检查侧栏快照")
     a = p.parse_args()
     DRY = a.dry_run
@@ -188,21 +183,14 @@ def main():
         if not a.skills_dir and not a.no_skills:
             edit_skills(skills_dir, a.uninstall)
         edit_hooks(agent, cfg, skills_dir, a.uninstall)
-        if a.no_rules:
-            continue
-        rules = cfg["rules_file"]
-        if (agent == "claude" and "codex" in wanted and rules.exists()
-                and ".codex/AGENTS.md" in rules.read_text(encoding="utf-8")):
-            say(f"跳过跟进规则：{rules} 已引用 ~/.codex/AGENTS.md，规则只写在那边")
-            continue
-        edit_rules(cfg, a.uninstall)
+        strip_old_rules(cfg)
 
     if a.uninstall:
         print("\n已卸载。工作区地图 ~/.agent-rules/workspace-map.md 保留，不需要可自行删除。")
         return
     print("\n装好了。接下来：")
     if "codex" in wanted:
-        print("- Codex：打开「设置 → Hooks」，信任 SessionStart 钩子，否则不会触发。")
+        print("- Codex：打开「设置 → Hooks」，信任 kk-sessions 的两个钩子（SessionStart、Stop），否则不会触发。")
     if not (HOME / ".agent-rules" / "workspace-map.md").exists():
         print("- 新开一个会话，说「初始化会话分区」，按你现有的会话和目录生成工作区地图。")
     else:
