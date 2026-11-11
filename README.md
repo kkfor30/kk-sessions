@@ -3,10 +3,10 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Claude_Code-%E6%8F%92%E4%BB%B6-E0672F" alt="Claude Code 插件">
-  <img src="https://img.shields.io/badge/Codex-%E6%8F%92%E4%BB%B6-24231F" alt="Codex 插件">
-  <img src="https://img.shields.io/badge/Python-3.8%2B-4C8BF5" alt="Python 3.8+">
-  <img src="https://img.shields.io/badge/license-MIT-9B7BE0" alt="MIT">
+  <img src="https://img.shields.io/badge/Claude_Code-%E6%8F%92%E4%BB%B6-FF6A3D" alt="Claude Code 插件">
+  <img src="https://img.shields.io/badge/Codex-%E6%8F%92%E4%BB%B6-141821" alt="Codex 插件">
+  <img src="https://img.shields.io/badge/Python-3.8%2B-3B82F6" alt="Python 3.8+">
+  <img src="https://img.shields.io/badge/license-MIT-8B5CF6" alt="MIT">
 </p>
 
 会话开多了，常常想不起某份稿子是在哪个会话里写的、存到了哪个目录。kk-sessions 给 AI 一张**工作区地图**：哪类事放哪个分区、文件存到哪里。之后每个新会话都会按地图自己起标题、放进侧栏分区，产物写进对应的主题目录。不满意随时一键回退。
