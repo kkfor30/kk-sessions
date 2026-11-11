@@ -1,15 +1,18 @@
 <p align="center">
-  <img src="./assets/readme/hero.svg" width="100%" alt="kk-sessions：新会话自己起名、归分区，产物写进对的目录。右侧是整理后的侧栏示意">
+  <img src="./assets/readme/hero.png" width="100%" alt="kk-sessions：新会话自己起名、归分区，产物写进对的目录。整理前会话按目录堆着、标题看不出在做什么，整理后同样的会话按领域分区、标题统一格式">
 </p>
 
 <p align="center">
-  支持 <b>Claude Code 桌面端</b> 和 <b>Codex 桌面端</b> · Python 3.8+ · MIT
+  <img src="https://img.shields.io/badge/Claude_Code-%E6%8F%92%E4%BB%B6-E0672F" alt="Claude Code 插件">
+  <img src="https://img.shields.io/badge/Codex-%E6%8F%92%E4%BB%B6-24231F" alt="Codex 插件">
+  <img src="https://img.shields.io/badge/Python-3.8%2B-4C8BF5" alt="Python 3.8+">
+  <img src="https://img.shields.io/badge/license-MIT-9B7BE0" alt="MIT">
 </p>
 
-会话开多了，常常想不起某份稿子是在哪个会话里写的、存到了哪个目录。kk-sessions 给 AI 一张**工作区地图**，规定哪类事放哪个分区、文件存到哪里。之后每个新会话都会按地图自己起标题、放进侧栏分区，产物写进对应的主题目录。
+会话开多了，常常想不起某份稿子是在哪个会话里写的、存到了哪个目录。kk-sessions 给 AI 一张**工作区地图**：哪类事放哪个分区、文件存到哪里。之后每个新会话都会按地图自己起标题、放进侧栏分区，产物写进对应的主题目录。不满意随时一键回退。
 
 <p align="center">
-  <img src="./assets/readme/flow.svg" width="100%" alt="三步：照常提需求 → 对照工作区地图 → 标题、分区、目录一起落位">
+  <img src="./assets/readme/flow.svg" width="100%" alt="一个例子走完三步：你照常提需求「帮我写一份 AI 工具教程大纲」→ 对照工作区地图命中「内容制作」→ 侧栏标题变成「✍️ 工具教程｜脚本大纲」并归入内容制作，文件写进 内容\工具教程\大纲.md">
 </p>
 
 ## 三步上手

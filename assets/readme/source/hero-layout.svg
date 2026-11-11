@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="690" viewBox="0 0 1200 690" role="img" aria-labelledby="title desc">
+  <title id="title">kk-sessions</title>
+  <desc id="desc">整理前：会话按工作目录堆在文件夹里，标题是「你好」「继续修改」「新会话」，看不出在做什么。中间的分拣机把它们分好类。整理后：同样六个会话按领域分区，标题统一为「类型 emoji 主题｜这次做什么」，等你处理的带沙漏。</desc>
+
+  <defs>
+    <g id="folder">
+      <path d="M0 3.5a2.5 2.5 0 0 1 2.5-2.5h4.6l2.2 2.4h8.2a2.5 2.5 0 0 1 2.5 2.5v9.6a2.5 2.5 0 0 1-2.5 2.5H2.5A2.5 2.5 0 0 1 0 15.5z" fill="none" stroke="#64748B" stroke-width="1.8"/>
+    </g>
+  </defs>
+
+  <rect width="1200" height="690" rx="28" fill="#FFFCF8"/>
+
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+    <!-- 标题区 -->
+    <text x="64" y="84" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18" letter-spacing="3" fill="#FF6A3D">CLAUDE CODE · CODEX 插件</text>
+    <text x="60" y="160" font-size="72" font-weight="700" fill="#0F172A" letter-spacing="-1">kk-sessions</text>
+    <text x="486" y="122" font-size="30" fill="#1E293B">新会话自己起名、归分区，</text>
+    <text x="486" y="164" font-size="30" fill="#1E293B">产物写进对的目录。</text>
+    <g transform="translate(892 98)">
+      <rect width="252" height="80" rx="14" fill="#FFF1EA"/>
+      <text x="20" y="35" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="19" fill="#0F172A">emoji 主题<tspan fill="#FF6A3D" font-weight="700">｜</tspan>做什么</text>
+      <text x="20" y="63" font-size="17" fill="#475569">统一标题格式 · ⏳ 等你处理</text>
+    </g>
+
+    <!-- 整理前：按工作目录堆着 -->
+    <text x="48" y="236" font-size="24" font-weight="700" fill="#0F172A">整理前</text>
+    <text x="134" y="236" font-size="18" fill="#64748B">按目录堆着，看不出在做什么</text>
+    <g transform="translate(48 260)">
+      <rect width="330" height="384" rx="18" fill="#FFFFFF" stroke="#EDE7DE" stroke-width="1.5"/>
+      <g transform="translate(24 30)">
+        <use href="#folder"/>
+        <text x="32" y="15" font-size="19" font-weight="600" fill="#334155">projects</text>
+      </g>
+      <g font-size="20" fill="#1F2937">
+        <text x="56" y="92">你好</text>
+        <text x="56" y="134">继续修改</text>
+        <text x="56" y="176">帮我看下这个报错</text>
+      </g>
+      <g transform="translate(24 212)">
+        <use href="#folder"/>
+        <text x="32" y="15" font-size="19" font-weight="600" fill="#334155">Desktop</text>
+      </g>
+      <g font-size="20" fill="#1F2937">
+        <text x="56" y="274">新会话</text>
+        <text x="56" y="316">讨论一下标题</text>
+        <text x="56" y="358">新会话</text>
+      </g>
+    </g>
+
+    <!-- 整理后：按领域分区 -->
+    <text x="822" y="236" font-size="24" font-weight="700" fill="#0F172A">整理后</text>
+    <text x="908" y="236" font-size="18" fill="#64748B">按领域分区，一眼看懂</text>
+    <g transform="translate(822 260)">
+      <rect width="330" height="384" rx="18" fill="#141821"/>
+      <g transform="translate(24 44)">
+        <circle cx="7" cy="-6" r="7" fill="#8B5CF6"/>
+        <text x="24" y="0" font-size="19" font-weight="600" fill="#FFFFFF">内容制作</text>
+        <text x="24" y="40" font-size="20" fill="#E2E8F0">✍️ 新品测评<tspan fill="#FF8A5C">｜</tspan>标题</text>
+        <text x="24" y="80" font-size="20" fill="#E2E8F0">🎬 新品测评<tspan fill="#FF8A5C">｜</tspan>精剪 ⏳</text>
+      </g>
+      <g transform="translate(24 164)">
+        <circle cx="7" cy="-6" r="7" fill="#3B82F6"/>
+        <text x="24" y="0" font-size="19" font-weight="600" fill="#FFFFFF">工具开发</text>
+        <text x="24" y="40" font-size="20" fill="#E2E8F0">🛠️ 截图工具<tspan fill="#FF8A5C">｜</tspan>方案</text>
+        <text x="24" y="80" font-size="20" fill="#E2E8F0">🐛 截图工具<tspan fill="#FF8A5C">｜</tspan>报错排查</text>
+      </g>
+      <g transform="translate(24 284)">
+        <circle cx="7" cy="-6" r="7" fill="#F5A524"/>
+        <text x="24" y="0" font-size="19" font-weight="600" fill="#FFFFFF">杂项</text>
+        <text x="24" y="40" font-size="20" fill="#E2E8F0">💬 Windows<tspan fill="#FF8A5C">｜</tspan>查 IP</text>
+        <text x="24" y="80" font-size="20" fill="#E2E8F0">💬 日常<tspan fill="#FF8A5C">｜</tspan>打招呼</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- 中间：Codex 生成的分拣机，换图只换这张 -->
+  <image href="hero-subject.png" x="388" y="282" width="424" height="340" preserveAspectRatio="xMidYMid meet"/>
+</svg>
