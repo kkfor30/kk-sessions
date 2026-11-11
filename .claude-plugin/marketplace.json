@@ -1,0 +1,16 @@
+{
+  "name": "kk-sessions",
+  "owner": {
+    "name": "kkfor30"
+  },
+  "description": "新会话自动归位：按工作区地图起统一格式的标题、放进侧栏分区、把产物写到对应目录；带一键回退。",
+  "plugins": [
+    {
+      "name": "kk-sessions",
+      "source": "./",
+      "description": "新会话自动归位：按工作区地图起统一格式的标题、放进侧栏分区、把产物写到对应目录；带一键回退。",
+      "version": "0.2.0",
+      "category": "productivity"
+    }
+  ]
+}

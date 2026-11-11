@@ -1,0 +1,17 @@
+{
+  "name": "kk-sessions",
+  "version": "0.2.0",
+  "description": "新会话自动归位：按工作区地图起统一格式的标题、放进侧栏分区、把产物写到对应目录；带一键回退。",
+  "author": {
+    "name": "kkfor30",
+    "url": "https://github.com/kkfor30"
+  },
+  "homepage": "https://github.com/kkfor30/kk-sessions",
+  "repository": "https://github.com/kkfor30/kk-sessions",
+  "license": "MIT",
+  "keywords": [
+    "sessions",
+    "sidebar",
+    "workspace"
+  ]
+}

@@ -51,6 +51,9 @@ def main():
         return
     if not (Path.home() / ".agent-rules" / "workspace-map.md").exists():
         return
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from kit import keep_restore_kit
+    keep_restore_kit()
     path = data.get("transcript_path")
     if not path or not Path(path).exists():
         return

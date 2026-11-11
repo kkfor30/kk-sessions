@@ -1,0 +1,28 @@
+{
+  "description": "kk-sessions：新会话启动提示 + 第一轮收尾检查",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[kk-session-route] 这是新会话，第一条消息按 kk-session-route skill 归位，但不要让归位挡在回答前面：一两句能答完的问题先直接回答，再在本轮末尾调用 kk-session-route 改标题、归区；要产出文件的任务先调用 kk-session-route 读地图、定目录、建目录，然后处理请求，改标题、归区、切目录放在本轮结束前完成。之后某轮回复结尾留下只有用户能做、做完才能继续的事时，在会话标题末尾加 ⏳，用户回来继续推进时去掉；除此之外不改标题。'",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 10,
+            "command": "if command -v py >/dev/null 2>&1; then py -3 \"${CLAUDE_PLUGIN_ROOT}/skills/kk-session-route/scripts/stop_check.py\"; else python3 \"${CLAUDE_PLUGIN_ROOT}/skills/kk-session-route/scripts/stop_check.py\"; fi"
+          }
+        ]
+      }
+    ]
+  }
+}

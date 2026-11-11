@@ -1,0 +1,29 @@
+{
+  "description": "kk-sessions：新会话启动说明 + 每轮结束后在后台改标题、归分区",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 10,
+            "command": "python3 \"${PLUGIN_ROOT}/skills/kk-session-route/scripts/session_start.py\"",
+            "commandWindows": "py -3 -X utf8 \"${PLUGIN_ROOT}/skills/kk-session-route/scripts/session_start.py\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 10,
+            "command": "python3 \"${PLUGIN_ROOT}/skills/kk-session-route/scripts/codex_route.py\"",
+            "commandWindows": "py -3 -X utf8 \"${PLUGIN_ROOT}/skills/kk-session-route/scripts/codex_route.py\""
+          }
+        ]
+      }
+    ]
+  }
+}

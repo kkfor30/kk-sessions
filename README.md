@@ -14,19 +14,27 @@
 
 ## 三步上手
 
-**1. 安装。** 把这句话发给 Claude Code 或 Codex：
+**1. 安装插件。** 把这句话发给 Claude Code 或 Codex，它会替你执行下面的命令：
 
-> 安装 https://github.com/kkfor30/kk-sessions ：clone 到本地后运行 `python install.py`
+> 帮我安装 kk-sessions 插件：https://github.com/kkfor30/kk-sessions
 
-或者自己执行：
+两个 Agent 各装各的，只用其中一个就只装那一个；两个都装时共用同一张工作区地图。
+
+Claude Code：
 
 ```bash
-git clone https://github.com/kkfor30/kk-sessions.git
-cd kk-sessions
-python install.py
+claude plugin marketplace add kkfor30/kk-sessions
+claude plugin install kk-sessions@kk-sessions
 ```
 
-脚本会检测本机的 `~/.claude` 和 `~/.codex`，给每个 Agent 装四个 Skill 和两个钩子，不改你的全局指令文件，重复执行也不会重复添加。**用 Codex 的话**，装完要到「设置 → Hooks」里信任这两个钩子；重装或换了 Python 后钩子命令会变，需要重新信任。
+Codex：
+
+```bash
+codex plugin marketplace add kkfor30/kk-sessions
+codex plugin add kk-sessions@kk-sessions
+```
+
+插件包含四个 Skill 和两个钩子，不改你的全局指令文件。**用 Codex 的话**，装完要到「设置 → Hooks」里信任 kk-sessions 的两个钩子。两边都需要本机有 Python 3.8 以上（Windows 用 `py` 启动器，python.org 的安装包默认带）。
 
 **2. 初始化。** 新开一个会话，说「初始化会话分区」。它会读你现有会话的标题和目录，拟一套分区和对应目录，你确认后写入 `~/.agent-rules/workspace-map.md`，并在侧栏建好分区。之后可以接着说「整理会话」，把旧会话一次归好。
 
@@ -80,17 +88,29 @@ python install.py
 
 ## 不满意，一键恢复
 
-kk-sessions 第一次改动侧栏前，会先存一份快照，放在 `~/.agent-rules/kk-sessions/snapshots/`，只记会话标题、分区和是否归档。
+只想暂时不用：停用插件即可，之后的新会话不再受影响，已经改过的标题和分区保持原样。
 
-1. 在会话里说「撤销 kk-sessions 的改动」：会话标题改回原样、移回原来的分区，kk-sessions 建的分区会被删掉。会话本身和磁盘上的文件夹都不动。
-2. 运行 `python install.py --uninstall`：移除 Skill 和钩子。
+想把侧栏恢复成用 kk-sessions 之前的样子：kk-sessions 第一次改动侧栏前会存一份快照（`~/.agent-rules/kk-sessions/snapshots/`，只记会话标题、分区和是否归档），并把回退工具复制到 `~/.agent-rules/kk-sessions/restore/`，**卸载插件后也还在**。
 
-如果没先做第 1 步就卸载，脚本会提醒你；确定不需要恢复侧栏，加 `--force`。
+- **Claude Code**：在会话里说「撤销 kk-sessions 的改动」。插件已卸载时，说「读 ~/.agent-rules/kk-sessions/restore/RESTORE.md，按里面的流程撤销 kk-sessions 的改动」。
+- **Codex**：在会话里说「撤销 kk-sessions 的改动」，或者自己运行（不调模型，Codex 桌面端要开着）：
+
+  ```bash
+  python ~/.agent-rules/kk-sessions/restore/restore.py           # 先看要改什么
+  python ~/.agent-rules/kk-sessions/restore/restore.py --apply   # 确认后执行
+  ```
+
+恢复会把 kk-sessions 改的标题改回原样、会话移回原来的分区、删掉 kk-sessions 建的分区。你后来自己改过的标题、放进自己分区的会话会跳过，置顶不动；会话本身和磁盘上的文件夹都不动。恢复前的样子会另存一份，想撤回这次恢复也有据可查。
 
 <details>
-<summary><b>安装选项</b></summary>
+<summary><b>不用插件，用安装脚本</b></summary>
+
+不想用插件系统，或者自己维护共享 Skill 库时，可以用安装脚本把同样的 Skill 和钩子写进配置文件。和插件二选一，不要同时装。
 
 ```bash
+git clone https://github.com/kkfor30/kk-sessions.git
+cd kk-sessions
+python install.py                   # 装到检测到的全部 Agent
 python install.py --agents codex    # 只装某个 Agent
 python install.py --dry-run         # 只打印将要做的事
 python install.py --uninstall       # 卸载
@@ -98,6 +118,7 @@ python install.py --uninstall       # 卸载
 
 - 自己维护共享 Skill 库时，加 `--skills-dir <目录>` 把 Skill 装到那里，钩子会指向它；如果 Skill 已经另行装好，再加 `--no-skills`。
 - 首次修改配置前，会把原文件备份为 `<文件名>.kk-sessions.bak`。卸载只移除本项目写入的部分，工作区地图会保留。
+- 钩子命令里是本机 Python 的绝对路径，换了 Python 后 Codex 要重新信任一次；插件没有这个问题。
 
 </details>
 
@@ -106,9 +127,11 @@ python install.py --uninstall       # 卸载
 
 | | Claude Code | Codex |
 | --- | --- | --- |
-| Skill | `~/.claude/skills/` | `~/.codex/skills/` |
-| 钩子 | `~/.claude/settings.json`：新会话启动提示 + 收尾检查 | `~/.codex/hooks.json`：新会话启动说明 + 每轮结束后的后台归位 |
+| 插件 | `~/.claude/plugins/`：四个 Skill + 新会话启动提示、收尾检查两个钩子 | `~/.codex/plugins/`：四个 Skill + 新会话启动说明、每轮结束后的后台归位两个钩子 |
 | 工作区地图 | `~/.agent-rules/workspace-map.md`（初始化时生成，两边共用） | 同左 |
+| 快照、日志、回退工具 | `~/.agent-rules/kk-sessions/`（卸载插件后保留） | 同左 |
+
+用安装脚本时，Skill 装到 `~/.claude/skills/`、`~/.codex/skills/`，钩子写进 `~/.claude/settings.json`、`~/.codex/hooks.json`。
 
 规则（产物写到哪、什么时候加 ⏳）由启动钩子在每个新会话开头交给模型，不写进 `CLAUDE.md` 或 `AGENTS.md`。旧版写进这两个文件的 `<!-- kk-sessions -->` 规则块，重装时会自动删掉。
 

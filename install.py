@@ -10,6 +10,7 @@
 """
 import argparse
 import json
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -20,14 +21,9 @@ if hasattr(sys.stdout, "reconfigure"):
 REPO = Path(__file__).resolve().parent
 HOME = Path.home()
 SKILLS = ["kk-session-route", "kk-session-tidy", "kk-session-setup", "kk-session-restore"]
-MARK = "kk-session-route"  # 钩子命令里含这个字符串即视为本项目写入
+MARK = "kk-session-route"  # 钩子命令里含这个字符串即视为本项目写入（启动提示的文字里也有）
 RULES_START = "<!-- kk-sessions:start -->"  # 旧版写进全局指令的规则块，现在只用于清理
 RULES_END = "<!-- kk-sessions:end -->"
-HINT = ("[kk-session-route] 这是新会话，第一条消息按 kk-session-route skill 归位，但不"
-        "要让归位挡在回答前面：一两句能答完的问题先直接回答，再在本轮末尾调用 kk-session-route 改标题、归区；"
-        "要产出文件的任务先调用 kk-session-route 读地图、定目录、建目录，然后处理请求，改标题、归区、切目录放在本轮结束前完成。"
-        "之后某轮回复结尾留下只有用户能做、做完才能继续的事时，在会话标题末尾加 ⏳，用户回来继续推进时去掉；除此之外不改标题。")
-
 AGENTS = {
     "claude": {
         "name": "Claude Code",
@@ -63,24 +59,27 @@ def write(f, text):
 
 
 def hook_specs(agent, cfg, skills_dir):
-    """本项目要写入的钩子：{事件: 钩子组}。"""
+    """本项目要写入的钩子：{事件: 钩子组}。和插件用同一份定义（hooks/hooks.json、hooks/codex.json），
+    只把插件目录变量和 Python 换成本机的绝对路径。"""
+    src = REPO / "hooks" / ("codex.json" if agent == "codex" else "hooks.json")
+    events = json.loads(src.read_text(encoding="utf-8"))["hooks"]
     scripts = skills_dir / "kk-session-route" / "scripts"
     py = f'"{Path(sys.executable).as_posix()}"'
-    if agent == "codex":  # 启动时交代会话要做的事；每轮结束后在后台改标题、归分区
-        def hook(script):
-            cmd = f'{py} "{(scripts / script).as_posix()}"'
-            h = {"type": "command", "timeout": 10, "command": cmd}
-            if sys.platform == "win32":  # Codex 在 Windows 用 PowerShell 跑钩子，带引号的程序路径要加 &
-                h["commandWindows"] = "& " + cmd
-            return h
-        return {"SessionStart": {"hooks": [hook("session_start.py")]},
-                "Stop": {"hooks": [hook("codex_route.py")]}}
-    return {  # Claude：启动提示 + 收尾检查（第一轮漏了归位就拦一次）
-        "SessionStart": {"matcher": cfg["matcher"], "hooks": [
-            {"type": "command", "command": f"echo '{HINT}'", "timeout": 10}]},
-        "Stop": {"hooks": [{"type": "command", "timeout": 10,
-                            "command": f'{py} "{(scripts / "stop_check.py").as_posix()}"'}]},
-    }
+    specs = {}
+    for event, groups in events.items():
+        group = dict(groups[0])
+        hooks = []
+        for h in group["hooks"]:
+            m = re.search(r"scripts/(\w+\.py)", h["command"])
+            if m:  # Python 脚本：改成本机 Python + 绝对路径
+                cmd = f'{py} "{(scripts / m.group(1)).as_posix()}"'
+                h = {"type": "command", "timeout": h.get("timeout", 10), "command": cmd}
+                if agent == "codex" and sys.platform == "win32":
+                    h["commandWindows"] = "& " + cmd  # Codex 在 Windows 用 PowerShell 跑钩子
+            hooks.append(h)
+        group["hooks"] = hooks
+        specs[event] = group
+    return specs
 
 
 def strip_ours(groups):

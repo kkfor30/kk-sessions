@@ -504,6 +504,8 @@ def hook():
     event = json.loads(sys.stdin.read(1024 * 1024) or "{}")
     if event.get("stop_hook_active") or not MAP.exists():
         return
+    from kit import keep_restore_kit
+    keep_restore_kit()
     thread_id = valid_id(event.get("session_id") or os.environ.get("CODEX_THREAD_ID", ""))
     if (STATE / "done" / thread_id).exists():
         return
