@@ -17,11 +17,16 @@
 
 ## 三步上手
 
-**1. 安装插件。** 把这句话发给 Claude Code 或 Codex，它会替你执行下面的命令：
+**1. 安装插件。** 把这句话发给 Claude Code 或 Codex，它会自己装好：
 
 > 帮我安装 kk-sessions 插件：https://github.com/kkfor30/kk-sessions
 
-两个 Agent 各装各的，只用其中一个就只装那一个；两个都装时共用同一张工作区地图。
+只用其中一个，就只在那一个里发；两个都装时共用同一张工作区地图。需要本机有 Python 3.8 以上（Windows 用 `py` 启动器，python.org 的安装包默认带）。
+
+**用 Codex 的话**，装完到「设置 → Hooks」里信任 kk-sessions 的两个钩子，这是唯一需要你手动点的一步。
+
+<details>
+<summary>想自己在终端里装</summary>
 
 Claude Code：
 
@@ -37,7 +42,9 @@ codex plugin marketplace add kkfor30/kk-sessions
 codex plugin add kk-sessions@kk-sessions
 ```
 
-插件包含四个 Skill 和两个钩子，不改你的全局指令文件。**用 Codex 的话**，装完要到「设置 → Hooks」里信任 kk-sessions 的两个钩子。两边都需要本机有 Python 3.8 以上（Windows 用 `py` 启动器，python.org 的安装包默认带）。
+插件包含四个 Skill 和两个钩子，不改你的全局指令文件。
+
+</details>
 
 **2. 初始化。** 新开一个会话，说「初始化会话分区」。它会读你现有会话的标题和目录，拟一套分区和对应目录，你确认后写入 `~/.agent-rules/workspace-map.md`，并在侧栏建好分区。之后可以接着说「整理会话」，把旧会话一次归好。
 
