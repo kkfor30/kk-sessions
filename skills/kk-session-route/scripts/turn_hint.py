@@ -77,8 +77,11 @@ def codex_title(thread_id):
 def hint(event):
     if os.environ.get("KK_SESSIONS_WORKER") == "1" or not MAP.exists():
         return None
+    # Codex 的钩子进程不带 CODEX_THREAD_ID；按事件内容认：Codex 的事件带 turn_id，记录文件在 ~/.codex 下
     thread_id = os.environ.get("CODEX_THREAD_ID") or ""
-    agent = "codex" if thread_id else "claude"
+    transcript = (event.get("transcript_path") or "").replace("\\", "/").lower()
+    is_codex = bool(thread_id or event.get("turn_id") or "/.codex/" in transcript)
+    agent = "codex" if is_codex else "claude"
     parts = []
     if agent == "claude":
         title = claude_title(event.get("transcript_path") or "")
