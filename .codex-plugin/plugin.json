@@ -1,6 +1,6 @@
 {
   "name": "kk-sessions",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "新会话自动归位：按工作区地图起统一格式的标题、放进侧栏分区、把产物写到对应目录；带一键回退。",
   "author": {
     "name": "kkfor30",
@@ -13,7 +13,7 @@
   "interface": {
     "displayName": "kk-sessions",
     "shortDescription": "新会话自动命名、归分区、产物归目录",
-    "longDescription": "新会话自动归位：按工作区地图起统一格式的标题、放进侧栏分区、把产物写到对应目录；带一键回退。后台用独立小模型命名，需要在「设置 → Hooks」信任两个钩子。需要 Python 3.8 以上。",
+    "longDescription": "新会话自动归位：按工作区地图起统一格式的标题、放进侧栏分区、把产物写到对应目录；带一键回退。后台用独立小模型命名，需要在「设置 → Hooks」信任三个钩子。需要 Python 3.8 以上。",
     "developerName": "kkfor30",
     "category": "Productivity",
     "capabilities": [],

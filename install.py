@@ -99,7 +99,7 @@ def edit_hooks(agent, cfg, skills_dir, remove):
     data = json.loads(f.read_text(encoding="utf-8")) if f.exists() else {}
     hooks = data.setdefault("hooks", {})
     specs = hook_specs(agent, cfg, skills_dir)
-    for event in ("SessionStart", "Stop"):
+    for event in ("SessionStart", "UserPromptSubmit", "Stop"):
         groups = strip_ours(hooks.get(event, []))
         if not remove and event in specs:
             groups.append(specs[event])
@@ -189,7 +189,7 @@ def main():
         return
     print("\n装好了。接下来：")
     if "codex" in wanted:
-        print("- Codex：打开「设置 → Hooks」，信任 kk-sessions 的两个钩子（SessionStart、Stop），否则不会触发。")
+        print("- Codex：打开「设置 → Hooks」，信任 kk-sessions 的三个钩子（SessionStart、UserPromptSubmit、Stop），否则不会触发。")
     if not (HOME / ".agent-rules" / "workspace-map.md").exists():
         print("- 新开一个会话，说「初始化会话分区」，按你现有的会话和目录生成工作区地图。")
     else:

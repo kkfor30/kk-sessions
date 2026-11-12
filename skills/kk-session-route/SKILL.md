@@ -65,7 +65,7 @@ description: 新会话第一轮做会话归位：按工作区地图判断这次�
 
 - 主题第一次命名后锁定，之后不改。
 - emoji 和｜后半段默认也不自动改。只有 kk-session-tidy 会对很长、阶段明显变化的会话提出改名建议，用户确认才改。
-- 末尾 ` ⏳` 按地图「跟进」一节增减，这是唯一允许 Agent 自动改的部分。
+- 末尾 ` ⏳` 按地图「跟进」一节增减，这是唯一允许 Agent 自动改的部分。首次归位之后，每轮开头的 UserPromptSubmit 钩子 `scripts/turn_hint.py` 会按当前标题给出一句 [kk-sessions] 提醒，照提醒在本轮结束时加或去掉。
 - 置顶只由用户手动操作。
 
 ## 适配
@@ -87,7 +87,7 @@ description: 新会话第一轮做会话归位：按工作区地图判断这次�
 
 ### Codex 桌面端
 
-新会话的改标题、建分区、移入分区由 Stop 钩子 `scripts/codex_route.py` 在后台完成：每轮结束后，对前 3 轮内、标题还不是规定格式的会话，调一次独立模型（默认 `gpt-6-luna`、low，可在 `~/.agent-rules/kk-sessions/config.json` 的 `codex_model`、`codex_effort` 改），再通过桌面端自己的工具通道写回（侧栏立即刷新；桌面端没开时退回 app-server），结果记在 `~/.agent-rules/kk-sessions/codex/log.jsonl`。SessionStart 钩子 `scripts/session_start.py` 在新会话开头把这些分工和 ⏳ 规则交给会话模型。所以新会话第一轮里：
+新会话的改标题、建分区、移入分区由 Stop 钩子 `scripts/codex_route.py` 在后台完成：新会话前 3 轮内每轮结束后，对标题还不是规定格式的会话，调一次独立模型（默认 `gpt-6-luna`、low，可在 `~/.agent-rules/kk-sessions/config.json` 的 `codex_model`、`codex_effort` 改），再通过桌面端自己的工具通道写回（侧栏立即刷新；桌面端没开时退回 app-server），结果记在 `~/.agent-rules/kk-sessions/codex/log.jsonl`。后台只处理用户自己开的会话（定时任务、子 Agent、`codex exec` 派发的跳过），出错时一分钟后在后台再试一次。地图外的长期新领域先归兜底分区，并留一条待提议记录，用户下一次发消息时由 `scripts/turn_hint.py` 提醒会话模型提议新分区。SessionStart 钩子 `scripts/session_start.py` 在新会话开头把这些分工交给会话模型。所以新会话第一轮里：
 
 - 情况 A：什么都不做。
 - 情况 B、C：只做「回答前」那几步（定目录、建目录、产物写到目标目录），不改标题、不动分区；切目录按下表降级；C 的末尾提问照常。

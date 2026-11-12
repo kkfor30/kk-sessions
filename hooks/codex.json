@@ -1,5 +1,5 @@
 {
-  "description": "kk-sessions：新会话启动说明 + 每轮结束后在后台改标题、归分区",
+  "description": "kk-sessions：新会话启动说明 + 每轮 ⏳ 提醒 + 新会话前几轮结束后在后台改标题、归分区",
   "hooks": {
     "SessionStart": [
       {
@@ -9,6 +9,18 @@
             "timeout": 10,
             "command": "python3 \"${PLUGIN_ROOT}/skills/kk-session-route/scripts/session_start.py\"",
             "commandWindows": "py -3 -X utf8 \"${PLUGIN_ROOT}/skills/kk-session-route/scripts/session_start.py\""
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 10,
+            "command": "python3 \"${PLUGIN_ROOT}/skills/kk-session-route/scripts/turn_hint.py\"",
+            "commandWindows": "py -3 -X utf8 \"${PLUGIN_ROOT}/skills/kk-session-route/scripts/turn_hint.py\""
           }
         ]
       }

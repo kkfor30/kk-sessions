@@ -4,7 +4,10 @@
 - 后台进程：读会话 → 判断要不要归位 → 调一次独立模型（codex exec --ephemeral，无工具）
   → 改标题、建分区、移入分区。不发消息、不改工作目录、不碰会话数据库。
 - 目录由会话本身按跟进规则写到目标目录，这里不处理。
-- 记录写在 ~/.agent-rules/kk-sessions/codex/：log.jsonl（每次结果）、done/<会话ID>（已处理）。
+- 只做首次归位（含首次 ⏳）；之后每轮的 ⏳ 由 UserPromptSubmit 钩子 turn_hint.py 提醒会话模型维护。
+- 出错时等一分钟在后台再试一次；每个会话最多起 MAX_TRIES 次后台进程。
+- 记录写在 ~/.agent-rules/kk-sessions/codex/：log.jsonl（每次结果）、done/<会话ID>（已处理）、
+  pending/<会话ID>.json（地图外的长期新领域，待会话模型向用户提议新分区）。
 - 模型和推理强度可在 ~/.agent-rules/kk-sessions/config.json 的 "codex_model"、"codex_effort" 指定。
 """
 import glob
@@ -56,15 +59,25 @@ POLICY = """你是会话归位助手。输入是用户的工作区地图和一�
    - 类型 emoji 只从地图「标题」表里选，按这次做的是哪类事选。
    - 主题是长期的话题名，用用户自己的叫法，项目名、产品名照原样写，2 到 8 个字；这次做什么 2 到 10 个字。emoji 后总共不超过 20 个字。
    - 用对话的语言，不加引号、句号或其他符号。
+   - 标题描述本会话自己做的事。对话里出现的其他会话标题、助手建议给别的会话用的标题都不是本会话的标题，不要照抄；比如本会话在排查另一个会话为什么没归位，主题写被排查的工具或项目，这次做什么写排查。
 3. waiting：这一轮结束时，事情能不能继续往下推进，是否取决于用户先做一件只有用户能做的事（做决定、验收、提供材料、在外部操作等）。从用户的要求和助手的回复两边一起判断。问题已经答完、或只是附带了可选建议时为 false。
-4. reason：一句话说明为什么这样归。
+4. new_section：这次是一个长期的新领域或新长期项目，而地图里所有分区的「放什么」都对不上时才填，此时 section 选兜底分区：
+   - 用户说了要长期、系统、持续地做某件事（长期学一门技能、做一个新系列、开一个新项目）就算长期，哪怕这次的产出只是第一步（入门计划、第一份方案）。
+   - 已有分区能放下（例如学的东西本身就是某个已有分区的内容）时不算。
+   - 三项都要填完整：name 是颜色 emoji 加空格再加 2 到 4 个字的领域名，颜色不和地图已有分区重复；root 是产物根目录的绝对路径，参照地图里其他分区的目录写法；clue 是一句判定线索。例如 `{"name": "🩷 语言学习", "root": "D:/学习/语言", "clue": "外语等长期学习计划和资料"}`。
+   - 一次性问答、杂事，或能归进已有分区时，三项都填空字符串。
+5. reason：一句话说明为什么这样归。
 """
 
 SCHEMA = {
     "type": "object", "additionalProperties": False,
-    "required": ["section", "title", "waiting", "reason"],
+    "required": ["section", "title", "waiting", "new_section", "reason"],
     "properties": {"section": {"type": "string"}, "title": {"type": "string"},
-                   "waiting": {"type": "boolean"}, "reason": {"type": "string"}},
+                   "waiting": {"type": "boolean"}, "reason": {"type": "string"},
+                   "new_section": {"type": "object", "additionalProperties": False,
+                                   "required": ["name", "root", "clue"],
+                                   "properties": {"name": {"type": "string"}, "root": {"type": "string"},
+                                                  "clue": {"type": "string"}}}},
 }
 
 
@@ -376,25 +389,27 @@ def ask_model(binary, context):
                 "-c", 'web_search="disabled"',
                 "-c", "model_instructions_file=" + json.dumps(str(tmp / "policy.md")),
                 "--output-schema", str(tmp / "schema.json"), "--output-last-message", str(out), "--json", "-"]
-        # 实测正常 10～20 秒，偶尔会卡住不返回：45 秒没结果就重来一次。
-        # 指定的模型报错（账号没有这个模型）时，退回 Codex 默认模型。
-        attempts = [[*base[:2], "-m", model, *base[2:]]] * 2 + [base] if model else [base, base]
-        err, i = "", 0
-        while i < len(attempts):
-            args = attempts[i]
+        # 实测正常 13～40 秒；网络不稳时会一直挂着：60 秒没结果算超时，最多试两次。
+        # 指定的模型报错（账号没有这个模型）时，第二次换 Codex 默认模型。
+        attempts = [[*base[:2], "-m", model, *base[2:]], base] if model else [base, base]
+        err = ""
+        for args in attempts:
             try:
                 proc = subprocess.run(args, input=json.dumps(context, ensure_ascii=False),
                                       capture_output=True, encoding="utf-8", env=worker_env(),
-                                      timeout=45, creationflags=NO_WINDOW)
-            except subprocess.TimeoutExpired:
-                err, i = "超时", i + 1
+                                      timeout=60, creationflags=NO_WINDOW)
+            except subprocess.TimeoutExpired as e:
+                tail = e.stderr or ""
+                if isinstance(tail, bytes):
+                    tail = tail.decode("utf-8", "replace")
+                err = "超时" + ("：" + tail.strip()[-200:] if tail.strip() else "")
                 continue
             if proc.returncode == 0 and out.exists():
                 return (json.loads(out.read_text(encoding="utf-8")), args[3] if "-m" in args else "default",
                         usage_of(proc.stdout))
             err = (proc.stderr or "")[-300:]
-            # 报错（不是超时）时重试同一模型没用，直接换默认模型
-            i = len(attempts) - 1 if "-m" in args else len(attempts)
+            if "-m" not in args:
+                break  # 默认模型也报错（不是超时），重试没用
         raise RuntimeError("独立模型失败：" + err)
 
 
@@ -436,6 +451,9 @@ def route(thread_id, turn_id):
         title = thread.get("name") or ""
         if thread.get("parentThreadId") or thread.get("ephemeral"):
             return {"status": "skip_child", "done": True}
+        # 定时任务、子 Agent、codex exec 派发的会话不是用户自己开的对话，不归位
+        if thread.get("source") == "exec" or thread.get("threadSource") in ("automation", "subagent"):
+            return {"status": "skip_non_user", "done": True}
         if TITLE_RE.match(title):
             return {"status": "already_titled", "done": True}
         rounds = user_texts(thread)
@@ -456,9 +474,17 @@ def route(thread_id, turn_id):
         if result.get("waiting") and not new_title.endswith("⏳"):
             new_title += " ⏳"
         section = result["section"].strip()
+        fallback = next((n for n in names if "杂项" in n), names[-1])
         if section not in names:
             # 兜底分区：名字带「杂项」的那行；用户改了名就用表里最后一行（模板把兜底放在最后）
-            section = next((n for n in names if "杂项" in n), names[-1])
+            section = fallback
+        proposal = {k: (result.get("new_section") or {}).get(k, "").strip() for k in ("name", "root", "clue")}
+        # 三项不全、名字只有 emoji 或和已有分区重名时不算提议
+        if not (proposal["root"] and proposal["clue"] and len(proposal["name"].split(" ", 1)[-1]) >= 2
+                and " " in proposal["name"] and proposal["name"] not in names):
+            proposal = None
+        if proposal:
+            section = fallback  # 用户同意前先放兜底分区
 
         sections = srv.paged("threadSection/list", {"limit": 100})
         ensure_snapshot(srv, sections)
@@ -485,19 +511,33 @@ def route(thread_id, turn_id):
                     sid = srv.call("threadSection/create", {"name": section})["section"]["id"]
                 srv.call("thread/section/move", {"threadId": thread_id, "sectionId": sid})
                 moved = True
+        if proposal:
+            # 后台不能发消息：留一条记录，用户下一次发消息时由 turn_hint.py 交给会话模型提议
+            (STATE / "pending").mkdir(parents=True, exist_ok=True)
+            (STATE / "pending" / f"{thread_id}.json").write_text(
+                json.dumps(proposal, ensure_ascii=False), encoding="utf-8")
         return {"status": "routed", "done": True, "title": new_title, "section": section, "moved": moved,
-                "via": via, "model": model, "usage": usage, "reason": result.get("reason")}
+                "new_section": proposal, "via": via, "model": model, "usage": usage,
+                "reason": result.get("reason")}
+
+
+RETRY_DELAY = 60  # 出错（多为网络不稳）后等这么久在后台再试一次，不等用户下一轮
 
 
 def worker(thread_id, turn_id):
-    start = time.monotonic()
-    try:
-        res = route(thread_id, turn_id)
-    except Exception as e:  # 后台进程，出错只记日志
-        res = {"status": "error", "message": str(e)[:300]}
-    if res.pop("done", False):
-        mark_done(thread_id, res["status"])
-    log({"thread": thread_id, **res, "seconds": round(time.monotonic() - start, 1)})
+    for attempt in (1, 2):
+        start = time.monotonic()
+        try:
+            res = route(thread_id, turn_id)
+        except Exception as e:  # 后台进程，出错只记日志
+            res = {"status": "error", "message": str(e)[:300]}
+        if res.pop("done", False):
+            mark_done(thread_id, res["status"])
+        log({"thread": thread_id, **res, "attempt": attempt, "seconds": round(time.monotonic() - start, 1)})
+        if res["status"] != "error":
+            return
+        if attempt == 1:
+            time.sleep(RETRY_DELAY)
 
 
 def hook():

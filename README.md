@@ -23,7 +23,7 @@
 
 只用其中一个，就只在那一个里发；两个都装时共用同一张工作区地图。需要本机有 Python 3.8 以上（Windows 用 `py` 启动器，python.org 的安装包默认带）。
 
-**用 Codex 的话**，装完到「设置 → Hooks」里信任 kk-sessions 的两个钩子，这是唯一需要你手动点的一步。
+**用 Codex 的话**，装完到「设置 → Hooks」里信任 kk-sessions 的三个钩子，这是唯一需要你手动点的一步。
 
 <details>
 <summary>想自己在终端里装</summary>
@@ -42,7 +42,7 @@ codex plugin marketplace add kkfor30/kk-sessions
 codex plugin add kk-sessions@kk-sessions
 ```
 
-插件包含四个 Skill 和两个钩子，不改你的全局指令文件。
+插件包含四个 Skill 和三个钩子，不改你的全局指令文件。
 
 </details>
 
@@ -69,7 +69,7 @@ codex plugin add kk-sessions@kk-sessions
 | --- | --- | --- | --- | --- | --- | --- | --- |
 
 - 主题第一次命名后就锁定；emoji 和｜后半段只在 `kk-session-tidy` 提出建议、你确认后才改。
-- 回复结尾留下只有你能做的事（选方案、验收、补素材）时，标题末尾会加 ` ⏳`；办完了你直接删掉即可。
+- 回复结尾留下只有你能做的事（选方案、验收、补素材）时，标题末尾会加 ` ⏳`。之后每轮开头会提醒模型按当前标题维护：你给了选择或材料、事情办完，或者说了「不用管了」，这一轮结束时就去掉；你也可以随时自己删掉。
 - 置顶只由你手动操作。
 
 ## 两个 Agent 分别怎么做
@@ -77,7 +77,7 @@ codex plugin add kk-sessions@kk-sessions
 | | 谁来归位 | 改名 | 分区 | 切目录 |
 | --- | --- | --- | --- | --- |
 | Claude Code 桌面端 | 会话本身，第一轮结束前 | 自动 | 自动 | 自动（批准一次） |
-| Codex 桌面端 | 后台独立模型，每轮结束后 | 自动 | 自动 | 由你在侧栏拖动 |
+| Codex 桌面端 | 后台独立模型，前几轮结束后 | 自动 | 自动 | 由你在侧栏拖动 |
 
 「切目录」是把会话的工作目录换到地图里的目标目录，「产物写到哪」是另一回事：要产出文件的任务，不管会话开在哪个文件夹，文件都会直接写进地图里的主题目录。Codex 不允许 Agent 把会话移到别的项目，回复最后会告诉你产物在哪。
 
@@ -92,7 +92,7 @@ codex plugin add kk-sessions@kk-sessions
 
 标题和分区由后台独立模型完成，和你选的会话模型无关。
 
-- 默认模型是 `gpt-6-luna`，推理强度 low，每次十几秒；账号用不了这个模型时，会自动换成 Codex 默认模型。想换模型，在 `~/.agent-rules/kk-sessions/config.json` 里写 `{"codex_model": "模型名", "codex_effort": "low"}`。
+- 默认模型是 `gpt-6-luna`，推理强度 low，通常在回复结束后 20 到 40 秒改好；网络不稳出错时，一分钟后会在后台自动再试一次；账号用不了这个模型时，会自动换成 Codex 默认模型。想换模型，在 `~/.agent-rules/kk-sessions/config.json` 里写 `{"codex_model": "模型名", "codex_effort": "low"}`。
 - **会发给模型的内容**：工作区地图，加上新会话前三轮内每轮的用户消息（最多 1200 字）和助手回答的结尾（最多 800 字）。走的是你自己的 Codex 账号，和平时对话的去处一样。每次的结果记在同目录的 `codex/log.jsonl`。
 - **依赖未公开接口**：结果是通过 Codex 桌面端的内部工具通道写回侧栏的，侧栏会立即刷新；这个通道不可用时，退回 Codex app-server 的实验接口，侧栏要等桌面端重新加载后才显示。这两个接口都不是公开 API，Codex 升级后可能失效，失效时日志里会出现 `error`。这时在会话里说「路由一下」，会改由会话模型用 Codex 正式提供的工具完成归位。
 
@@ -137,20 +137,20 @@ python install.py --uninstall       # 卸载
 
 | | Claude Code | Codex |
 | --- | --- | --- |
-| 插件 | `~/.claude/plugins/`：四个 Skill + 新会话启动提示、收尾检查两个钩子 | `~/.codex/plugins/`：四个 Skill + 新会话启动说明、每轮结束后的后台归位两个钩子 |
+| 插件 | `~/.claude/plugins/`：四个 Skill + 新会话启动提示、每轮 ⏳ 提醒、收尾检查三个钩子 | `~/.codex/plugins/`：四个 Skill + 新会话启动说明、每轮 ⏳ 提醒、后台归位三个钩子 |
 | 工作区地图 | `~/.agent-rules/workspace-map.md`（初始化时生成，两边共用） | 同左 |
 | 快照、日志、回退工具 | `~/.agent-rules/kk-sessions/`（卸载插件后保留） | 同左 |
 
 用安装脚本时，Skill 装到 `~/.claude/skills/`、`~/.codex/skills/`，钩子写进 `~/.claude/settings.json`、`~/.codex/hooks.json`。
 
-规则（产物写到哪、什么时候加 ⏳）由启动钩子在每个新会话开头交给模型，不写进 `CLAUDE.md` 或 `AGENTS.md`。旧版写进这两个文件的 `<!-- kk-sessions -->` 规则块，重装时会自动删掉。
+规则（产物写到哪、什么时候加 ⏳）由钩子交给模型（启动时一次，⏳ 每轮一句提醒），不写进 `CLAUDE.md` 或 `AGENTS.md`。旧版写进这两个文件的 `<!-- kk-sessions -->` 规则块，重装时会自动删掉。
 
 </details>
 
 <details>
 <summary><b>花费</b></summary>
 
-归位只在新会话开头执行一次。Claude Code 大约用 5 千到 8 千 token，用的是会话本身的模型；Codex 输入约 6 千多 token（大部分是 Codex 固定的系统提示），输出不到 200，用的是后台独立模型。`kk-session-setup` 和 `kk-session-tidy` 只读会话的标题、目录和分区，不读聊天记录。
+归位只在新会话开头执行一次。Claude Code 大约用 5 千到 8 千 token，用的是会话本身的模型；Codex 输入约 6 千多 token（大部分是 Codex 固定的系统提示），输出不到 200，用的是后台独立模型。之后每轮只多一句几十到一百多 token 的 ⏳ 提醒，不额外调用模型。`kk-session-setup` 和 `kk-session-tidy` 只读会话的标题、目录和分区，不读聊天记录。
 
 </details>
 
